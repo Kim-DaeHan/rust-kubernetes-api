@@ -1,4 +1,5 @@
 use clap::Parser;
+use k8s_openapi::api::core::v1::Pod;
 use kube::{
     api::{Api, PatchParams, PatchStrategy, Resource},
     config,
@@ -13,6 +14,16 @@ struct JsonPatch {
     value: u32,
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct DeploymentSpec {
+    replicas: u32,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct Deployment {
+    spec: DeploymentSpec,
+}
+
 #[derive(Parser, Debug)]
 struct Cli {
     #[arg(short, long)]
@@ -22,11 +33,14 @@ struct Cli {
     path: String,
 }
 
-fn main() {
-    println!("Hello, world!");
-
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     let path: JsonPatch = serde_json::from_str(&cli.path).expect("failed");
+    let deployment_name = cli.name;
 
-    println!("{:?}", path)
+    println!("{:?}", path);
+    println!("{:?}", deployment_name);
+
+    Ok(())
 }

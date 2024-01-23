@@ -1178,7 +1178,9 @@ name = "stclab-task"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "k8s-openapi",
  "kube",
+ "kube-core",
  "serde",
  "serde_json",
  "tokio",
