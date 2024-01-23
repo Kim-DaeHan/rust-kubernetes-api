@@ -1,8 +1,8 @@
 use clap::Parser;
 use k8s_openapi::api::core::v1::Pod;
 use kube::{
-    api::{Api, PatchParams, Resource},
-    config,
+    api::{Api, ListParams, PostParams, ResourceExt},
+    Client,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -36,8 +36,16 @@ struct Cli {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
+
     let path: JsonPatch = serde_json::from_str(&cli.path).expect("failed");
     let deployment_name = cli.name;
+
+    let client = Client::try_default().await?;
+
+    let pods: Api<Pod> = Api::default_namespaced(client);
+    for p in pods.list(&ListParams::default()).await? {
+        println!("found pod {}", p.name_any());
+    }
 
     println!("{:?}", path);
     println!("{:?}", deployment_name);
