@@ -1,7 +1,7 @@
 use clap::Parser;
 use k8s_openapi::api::core::v1::Pod;
 use kube::{
-    api::{Api, PatchParams, PatchStrategy, Resource},
+    api::{Api, PatchParams, Resource},
     config,
 };
 use serde::Deserialize;
