@@ -1180,7 +1180,6 @@ dependencies = [
  "clap",
  "k8s-openapi",
  "kube",
- "kube-core",
  "serde",
  "serde_json",
  "tokio",
