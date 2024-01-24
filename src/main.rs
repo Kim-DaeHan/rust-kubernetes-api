@@ -1,8 +1,7 @@
 use clap::Parser;
 use k8s_openapi::api::apps::v1::Deployment;
-use k8s_openapi::api::core::v1::Pod;
 use kube::{
-    api::{Api, ListParams, Patch, PatchParams, ResourceExt},
+    api::{Api, Patch, PatchParams},
     Client,
 };
 use serde::Deserialize;
@@ -30,48 +29,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cli_path: JsonPatch = serde_json::from_str(&cli.path).expect("failed");
     let op = cli_path.op;
-    let value = cli_path.value;
-    let path = cli_path.path;
 
-    let deployment_name = cli.name;
+    match op.as_str() {
+        // op가 replace일 때만 replicas 수정하는 작업
+        "replace" => {
+            let value = cli_path.value;
+            let path = cli_path.path;
 
-    let client = Client::try_default().await?;
+            // deployment 이름
+            let deployment_name = cli.name;
 
-    // Deployment에 접근하기 위해 Api 객체 생성
-    let deployments: Api<Deployment> = Api::default_namespaced(client.clone());
-    // 생성한 Deployment들 확인 하는 코드
-    for d in deployments.list(&ListParams::default()).await? {
-        println!("found deployment {}", d.name_any());
-    }
+            // /spec/replicas 로 들어오는 path 가공
+            let path_components: Vec<&str> = path.split('/').collect();
+            let spec = path_components[1];
+            let replicas = path_components[2];
 
-    // Deployment 이름으로부터 Deployment 리소스 가져오기
-    let deployment = deployments.get(&deployment_name).await?;
+            // Kubernetes 클러스터 클라이언트 생성
+            let client = Client::try_default().await?;
 
-    let patch_params = PatchParams {
-        field_manager: Some("my-deployment".to_string()),
-        ..Default::default()
-    };
-    let patch_data = json!({
-        "op": op,
-        "path": path,
-        "value": value,
-    });
-    let patch_data = Patch::Apply(&patch_data);
+            // Deployment에 접근하기 위해 Api 객체 생성
+            let deployments: Api<Deployment> = Api::default_namespaced(client.clone());
 
-    // Deployment 수정
-    deployments
-        .patch(&deployment_name, &patch_params, &patch_data)
-        .await?;
+            // fieldManager 설정(이상하게 fieldManager를 똑같이 설정해서 deployment를 생성해도 conflicts 에러 발생해서 force로 강제 수정
+            let patch_params = PatchParams {
+                field_manager: Some("kube".to_string()),
+                force: true,
+                ..Default::default()
+            };
 
-    // 수정된 Deployment 확인 또는 다른 작업 수행
-    let modified_deployment = deployments.get(&deployment_name).await?;
-    println!("Modified Deployment: {:?}", modified_deployment);
+            // 변환할 내용 json객체 생성(apiVersion, kind 없으면 에러 발생)
+            let patch_data = json!({
+                "apiVersion": "apps/v1",
+                "kind": "Deployment",
+                spec: {
+                    replicas :value
+            }});
 
-    // 생성한 pod 확인 하는 코드
-    let pods: Api<Pod> = Api::default_namespaced(client);
+            let patch_data = Patch::Apply(&patch_data);
 
-    for p in pods.list(&ListParams::default()).await? {
-        println!("found pod {}", p.name_any());
+            // Deployment 수정
+            deployments
+                .patch(&deployment_name, &patch_params, &patch_data)
+                .await?;
+        }
+        // op가 다른 연산일 때 (ex add) 필요한 로직 작성
+        _ => {
+            println!("replace 말고 다른 연산 로직 추가된다면 실행");
+        }
     }
 
     Ok(())
