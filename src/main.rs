@@ -42,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // /spec/replicas 로 들어오는 path 가공
             let path_components: Vec<&str> = path.split('/').collect();
             let spec = path_components[1];
-            let key = path_components[2];
+            let replicas = path_components[2];
 
             // Kubernetes 클러스터 클라이언트 생성
             let client = Client::try_default().await?;
@@ -62,7 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "apiVersion": "apps/v1",
                 "kind": "Deployment",
                 spec: {
-                    key :value
+                    replicas :value
             }});
 
             let patch_data = Patch::Apply(&patch_data);
