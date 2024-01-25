@@ -1,5 +1,5 @@
 [package]
-name = "stclab-task"
+name = "rust-kubernetes-api"
 version = "0.1.0"
 edition = "2021"
 
